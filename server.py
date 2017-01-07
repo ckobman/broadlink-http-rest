@@ -28,8 +28,18 @@ class Server(BaseHTTPRequestHandler):
                 self.wfile.write("Failed: No command learned")
             else:
                 self.wfile.write("Learned: %s" % commandName)
+       
 
-        
+	elif 'sp2' in self.path:
+	    spIP = self.path.split('/')[2]
+            spMAC = self.path.split('/')[3]
+            spState = self.path.split('/')[4]
+	    result = sendSPCommand(spIP, spMAC, spState)
+            if result == False:
+                self.wfile.write("Failed: Unknonwn command")
+            else:
+                self.wfile.write("Sent: %s" % spState)
+
         elif 'sendCommand' in self.path:
             commandName = self.path.split('/')[2]
             if 'on' in commandName or 'off' in commandName:
@@ -46,8 +56,6 @@ class Server(BaseHTTPRequestHandler):
             else:
                 self.wfile.write("Sent: %s" % commandName)
                 
-
-
 
         elif 'getStatus' in self.path:
             commandName = self.path.split('/')[2]
@@ -88,12 +96,38 @@ class Server(BaseHTTPRequestHandler):
             self.wfile.write("Failed")
 
 
+def sendSPCommand(spIP, spMAC, spState):
+
+        try:
+                device = broadlink.sp2(host=(spIP,80), mac=bytearray.fromhex(spMAC))
+                device.auth()
+                time.sleep(3)
+                device.host
+
+                if spState == "1":
+                        device.set_power(True)
+			print "on"
+                else:
+                        device.set_power(False)
+			print "off"
+        except:
+                        print "error"
+                        pass
+
+
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(4)   # Ten seconds
+        try:
+            device.send_data(finalCommand)
+        except Exception, msg:
+            print "Probably timed out.."
+            return True
+
+
+
 def sendCommand(commandName):
     device = broadlink.rm((RMIPAddress, RMPort), RMMACAddress)
     device.auth()
-
-    deviceKey = device.key
-    deviceIV = device.iv
 
     if settingsFile.has_option('Commands', commandName):
         commandFromSettings = settingsFile.get('Commands', commandName)
@@ -103,11 +137,9 @@ def sendCommand(commandName):
     print('sending command %s' % commandName)
     if commandFromSettings.strip() != '':
         decodedCommand = binascii.unhexlify(commandFromSettings)
-        AESEncryption = AES.new(str(deviceKey), AES.MODE_CBC, str(deviceIV))
-        encodedCommand = AESEncryption.encrypt(str(decodedCommand))
         
-        finalCommand = encodedCommand[0x04:]    
-        
+        finalCommand = decodedCommand
+	device.send_data(finalCommand)   
         signal.signal(signal.SIGALRM, signal_handler)
         signal.alarm(4)   # Ten seconds
         try:
@@ -120,9 +152,6 @@ def learnCommand(commandName):
     device = broadlink.rm((RMIPAddress, RMPort), RMMACAddress)
     device.auth()
 
-    deviceKey = device.key
-    deviceIV = device.iv
-
     device.enter_learning()
     time.sleep(RealTimeout)
     LearnedCommand = device.check_data()
@@ -131,11 +160,9 @@ def learnCommand(commandName):
         print('Command not received')
         return False
 
-    AdditionalData = bytearray([0x00, 0x00, 0x00, 0x00])    
-    finalCommand = AdditionalData + LearnedCommand
+    finalCommand = LearnedCommand
 
-    AESEncryption = AES.new(str(deviceKey), AES.MODE_CBC, str(deviceIV))
-    decodedCommand = binascii.hexlify(AESEncryption.decrypt(str(finalCommand)))
+    decodedCommand = binascii.hexlify(str(finalCommand))
 
     broadlinkControlIniFile = open(path.join(settings.applicationDir, 'settings.ini'), 'w')    
     settingsFile.set('Commands', commandName, decodedCommand)
