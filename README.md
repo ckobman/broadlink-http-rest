@@ -7,6 +7,23 @@ Uses [python-broadlink](https://github.com/mjg59/python-broadlink)
 
 Based and inspired by [BlackBeanControl](https://github.com/davorf/BlackBeanControl)
 
+
+### Requirements
+
+1. `python` (2.7)
+2. `python-broadlink`
+3. `netaddr`
+4. `configparser`
+
+### Installation
+
+1. `git clone https://github.com/NightRang3r/broadlink-http-rest`
+2. `sudo pip install broadlink`
+3. `sudo pip install netaddr`
+4. `sudo pip install configparser`
+
+
+
 Example usage
 -------------
 
