@@ -9,6 +9,7 @@ from os import path
 from Crypto.Cipher import AES
 
 class Server(BaseHTTPRequestHandler):
+
     def _set_headers(self):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
@@ -62,7 +63,7 @@ class Server(BaseHTTPRequestHandler):
             if 'temp' in commandName:
                 result = getTempRM()
                 if result == False:
-                    self.wfile.write("Failed: Can not get temperature")
+                    self.wfile.write("Failed: Cannot get temperature")
                 else:
                     self.wfile.write('''{ "temperature": %s } ''' % result)
             else:
@@ -70,7 +71,7 @@ class Server(BaseHTTPRequestHandler):
                 if (status):
                     self.wfile.write(status)
                 else:
-                    self.wfile.write("Failed: Unknonwn command")
+                    self.wfile.write("Failed: Unknown command")
         
         elif 'setStatus' in self.path:
             commandName = self.path.split('/')[2]
@@ -80,7 +81,7 @@ class Server(BaseHTTPRequestHandler):
             if (result):
                 self.wfile.write("Set status of %s to %s" % (commandName, status))
             else:
-                self.wfile.write("Failed: Unknonwn command")
+                self.wfile.write("Failed: Unknown command")
 
         elif 'a1'  in self.path:
             sensor = self.path.split('/')[2]
@@ -95,6 +96,7 @@ class Server(BaseHTTPRequestHandler):
         else:
             self.wfile.write("Failed")
 
+serverPort = ''
 
 def sendSPCommand(spIP, spMAC, spState):
 
@@ -215,9 +217,11 @@ def getA1Sensor(sensor):
     return False 
 
 def signal_handler(signum, frame):
-    print ("Http timeout but the command should be already sent.")
+    print ("HTTP timeout, but the command should be already sent.")
         
-def start(server_class=HTTPServer, handler_class=Server, port=8080):
+def start(server_class=HTTPServer, handler_class=Server, port=serverPort):
+
+
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
     print 'Starting broadlink-rest server on port %s ...' % port
@@ -274,4 +278,11 @@ if __name__ == "__main__":
     else:
         RealTimeout = int(RealTimeout.strip())    
 
-    start()
+
+    if settingsFile.has_option('General', 'serverPort'):
+        serverPort = int(settingsFile.get('General', 'serverPort'))
+    else:
+        serverPort = 8080
+
+
+    start(port=serverPort)
